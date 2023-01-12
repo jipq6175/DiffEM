@@ -85,10 +85,17 @@ def get_noisy_image(x0, t, params):
     return x_noisy
     
 
-# Sampling
+# Sampling: Samples from the noisy gaussian 
+# stochastic or naively deterministic 
+# noise_scale = 1.0: stochastic
+# noise_level = 0.0: deterministic
+# noise_level = 1/n: if we average n^2 denoised samples together 
+# noise_level is the degree of hallucination
 @torch.no_grad()
-def p_sample(model, x, t, params, t_index): 
+def p_sample(model, x, t, params, t_index, noise_scale=1.0): 
     
+    assert noise_scale >= 0.0 and noise_scale <= 1.0
+
     betas_t = extract(params['betas'], t, x.shape)
     sqrt_one_minus_alphas_cumprod_t = extract(params['sqrt_one_minus_alphas_cumprod'], t, x.shape)
     sqrt_recip_alphas_t = extract(params['sqrt_recip_alphas'], t, x.shape)
@@ -101,8 +108,8 @@ def p_sample(model, x, t, params, t_index):
     else: 
         posterior_variance_t = extract(params['posterior_variance'], t, x.shape)
         noise = torch.randn_like(x)
-        return model_mean + torch.sqrt(posterior_variance_t) * noise
-    
+        return model_mean + torch.sqrt(posterior_variance_t) * noise * noise_scale
+
 
 @torch.no_grad()
 def p_sample_loop(model, shape, params, T): 
@@ -116,7 +123,7 @@ def p_sample_loop(model, shape, params, T):
     imgs = []
     
     for i in tqdm(reversed(range(0, T)), desc='Sampling Loop Timestep', total=T):
-        img = p_sample(model, img, torch.full((b, ), i, device=device, dtype=torch.long), params, i)
+        img = p_sample(model, img, torch.full((b, ), i, device=device, dtype=torch.long), params, i, noise_scale=1.0)
         imgs.append(img.cpu().numpy())
     
     return imgs
@@ -125,9 +132,12 @@ def p_sample_loop(model, shape, params, T):
 def sample(model, image_size, batch_size, channels, params): 
     return p_sample_loop(model, shape=(batch_size, channels, image_size, image_size), params=params, T=len(params['betas']))
 
-# Denoising 
+
+# Denoising: 
+# Treat xt as the noise level at t = t
+# and then denoise for nt time steps
 @torch.no_grad()
-def p_denoising_loop(model, xt, t, nt, params): 
+def p_denoising_loop(model, xt, t, nt, params, noise_scale=1.0): 
     
     if nt == 0: return xt
 
@@ -147,13 +157,13 @@ def p_denoising_loop(model, xt, t, nt, params):
     imgs.append(img.cpu().numpy())
     
     for i in tqdm(reversed(range(t_final, t)), desc=f'Denoising {t} to {t_final}'):
-        img = p_sample(model, img, torch.full((b, ), i, device=device, dtype=torch.long), params, i)
+        img = p_sample(model, img, torch.full((b, ), i, device=device, dtype=torch.long), params, i, noise_scale=noise_scale)
         imgs.append(img.cpu().numpy())
     
     return imgs
 
 @torch.no_grad()
-def denoise(model, xt, t, nt, params): return p_denoising_loop(model, xt, t, nt, params=params)
+def denoise(model, xt, t, nt, params, noise_scale=1.0): return p_denoising_loop(model, xt, t, nt, params=params, noise_scale=noise_scale)
 
 
 

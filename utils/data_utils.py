@@ -70,7 +70,7 @@ def plot(imgs, with_orig=False, row_title=None, **imshow_kwargs):
     num_rows = len(imgs)
     num_cols = len(imgs[0]) + with_orig
     
-    fig, axes = plt.subplots(figsize=(200, 200), nrows=num_rows, ncols=num_cols, squeeze=False)
+    fig, axes = plt.subplots(figsize=(20 * num_cols, 20 * num_rows), nrows=num_rows, ncols=num_cols, squeeze=False)
     for row_idx, row in enumerate(imgs): 
         # row = [image] + row if with_orig else row
         for col_idx, img in enumerate(row): 

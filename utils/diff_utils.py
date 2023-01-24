@@ -6,7 +6,9 @@ import numpy as np
 
 from tqdm.auto import tqdm
 
-from .data_utils import exists
+import matplotlib.pyplot as plt
+
+from .data_utils import exists, plot
 
 
 
@@ -122,7 +124,7 @@ def p_sample_loop(model, shape, params, T):
     img = torch.randn(shape, device=device)
     imgs = []
     
-    for i in tqdm(reversed(range(0, T)), desc='Sampling Loop Timestep', total=T):
+    for i in tqdm(reversed(range(0, T)), desc='-- Sampling Loop Timestep', total=T):
         img = p_sample(model, img, torch.full((b, ), i, device=device, dtype=torch.long), params, i, noise_scale=1.0)
         imgs.append(img.cpu().numpy())
     
@@ -156,7 +158,7 @@ def p_denoising_loop(model, xt, t, nt, params, noise_scale=1.0):
     imgs = []
     imgs.append(img.cpu().numpy())
     
-    for i in tqdm(reversed(range(t_final, t)), desc=f'Denoising {t} to {t_final}'):
+    for i in tqdm(reversed(range(t_final, t)), desc=f'-- Denoising {t} to {t_final}'):
         img = p_sample(model, img, torch.full((b, ), i, device=device, dtype=torch.long), params, i, noise_scale=noise_scale)
         imgs.append(img.cpu().numpy())
     
@@ -183,3 +185,26 @@ def p_losses(denoising_model, x0, t, params, noise=None, loss_type='L1'):
     else: raise NotImplementedError()
     
     return loss
+
+
+# sample the images and deposit 
+def visualize_samples(noise2noise, image_size, batch_size, channels, params, savepath):
+    samples = sample(noise2noise, image_size=image_size, batch_size=batch_size, channels=channels, params=params)
+    T = len(params['betas'])
+    ts = [0, 50, int(0.5 * T), int(0.75 * T), int(0.9 * T), T - 10, T - 5, T - 3, T - 2, T - 1]
+    samples_for_plot = [[torch.from_numpy(samples[j][i, 0, :, :]) for j in ts] for i in range(batch_size)]
+    plot(samples_for_plot)
+    plt.savefig(savepath)
+    return samples
+
+
+
+# # denoise the images and deposit 
+# def visualize_samples(noise2noise, image_size, batch_size, channels, params, savepath):
+#     samples = sample(noise2noise, image_size=image_size, batch_size=batch_size, channels=channels, params=params)
+#     T = len(params['beta'])
+#     ts = [0, 50, int(0.5 * T), int(0.75 * T), int(0.9 * T), T - 10, T - 5, T - 3, T - 2, T - 1]
+#     samples_for_plot = [[torch.from_numpy(samples[j][i, 0, :, :]) for j in ts] for i in range(batch_size)]
+#     plot(samples_for_plot)
+#     plt.savefig(savepath)
+#     return samples

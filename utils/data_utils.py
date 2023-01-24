@@ -17,7 +17,14 @@ from torch.utils.data import DataLoader
 
 
 # Global Parameters
+DIR = '/home/ubuntu/'
 DATAPATH = '/home/ubuntu/data/10299_1k.mrcs'
+
+S3MODELURI = 's3://seismictx-cryoem/diffem/trained_models/'
+MODELPATH = '/home/ubuntu/trained_models/'
+
+S3VISURI = 's3://seismictx-cryoem/diffem/diffusion_results/'
+RLTDIR = '/home/ubuntu/diffusion_results/'
 
 
 
@@ -27,6 +34,11 @@ def default(val, d):
     if exists(val): return val
     return d() if isfunction(d) else d
 
+
+def s3sync(p1, p2): 
+    s3cmd = f'aws s3 sync {p1} {p2}'
+    assert os.system(s3cmd) == 0
+    return None
 
 
 # read the mrcs and get the stacked images as numpy 

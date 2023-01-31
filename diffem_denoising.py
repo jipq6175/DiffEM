@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     
     T = 1000
-    BATCH_SIZE = 100
+    BATCH_SIZE = 400
     IMAGE_SIZE = 128
     CHANNELS = 1
 
@@ -38,10 +38,11 @@ if __name__ == '__main__':
     hallucinations = [0.0, 0.1, 0.2, 0.5, 1.0]
 
     # sample images and save as mrcs
-    for dset in ['test-30k', 'test-50k']:
+    # for dset in ['test-30k', 'test-50k']:
+    for dset in ['test-50k']:
         
         test_images = read_mrcs(f'/home/ubuntu/data/{dset}/{dset}.mrcs')
-        sample_dct = {T-1: [], T-10: [], int(0.9 * T): [], int(0.8 * T): []}
+        sample_dct = {T - 1: [], T - 10: [], int(0.9 * T): [], int(0.8 * T): []}
         nepochs = int(test_images.shape[0] / BATCH_SIZE)
         
         deposit_path = os.path.join('/home/ubuntu/data/denoised/', dset)
@@ -69,3 +70,6 @@ if __name__ == '__main__':
                 s3path = os.path.join('s3://seismictx-cryoem/diffem/data/denoised/', dset, f'denoised_samples_nl_{t}_halluc_{noise_scale:.1f}_50_steps.mrcs')
                 s3cmd = f'aws s3 cp {filepath} {s3path}'
                 assert os.system(s3cmd) == 0
+
+                rmcmd = f'rm {filepath}'
+                assert os.system(rmcmd) == 0

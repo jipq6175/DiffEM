@@ -7,6 +7,7 @@ import os, sys, pickle, mrcfile, torch, copy
 
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 
 
@@ -19,6 +20,9 @@ from torch.utils.data import DataLoader
 # Global Parameters
 DIR = '/home/ubuntu/'
 DATAPATH = '/home/ubuntu/data/10299_1k.mrcs'
+RECONPATH = '/home/ubuntu/reconstructions/'
+RECONBIN = '/home/ubuntu/relion/build/bin/relion_reconstruct'
+
 
 S3MODELURI = 's3://seismictx-cryoem/diffem/trained_models/'
 MODELPATH = '/home/ubuntu/trained_models/'
@@ -99,3 +103,66 @@ def plot(imgs, with_orig=False, row_title=None, **imshow_kwargs):
             axes[row_idx, 0].set(ylabel=row_title[row_idx])
     
     plt.tight_layout()
+
+
+# for cryo em reconstructions
+def get_mrcs_number_and_name(starfile):
+    
+    assert os.path.isfile(starfile)
+    f = open(starfile, 'r')
+    last_line = f.readlines()[-2]
+    f.close()
+    
+    s = last_line.split()[3]
+    n, name = s.split('@')
+    return int(n), name
+
+def reconstruct(starpath, mrcsuri, reconpath=RECONPATH, reconbin=RECONBIN): 
+
+    currdir = os.getcwd()
+    n, mrcsname = get_mrcs_number_and_name(starpath)
+    mrcss3name = os.path.basename(mrcsuri)
+
+    # get the star file
+    os.chdir(reconpath)
+
+    s3cmd = f'aws s3 cp {mrcsuri} ./{mrcsname}'
+    assert os.system(s3cmd) == 0
+
+    mrc = mrcfile.open(mrcsname)
+    assert mrc.data.shape[0] == n, '# of images does not match the star file'
+    
+    relioncmd = f'{reconbin} --i {starpath} --o {mrcss3name[:-5]}_reconstruction.mrc'
+    assert os.system(relioncmd) == 0
+
+    os.chdir(currdir)
+    
+    return os.path.join(reconpath, f'{mrcss3name[:-5]}_reconstruction.mrc') 
+
+
+# maybe not bothere with voxel visualization
+# def plot_voxel(mrcpath): 
+
+#     assert os.path.isfile(mrcpath)
+#     mrc = mrcfile.open(mrcpath)
+
+#     d1, d2, d3 = mrc.data.shape
+#     assert d1 == d2 == d3
+#     M, m = mrc.data.max(), mrc.data.min()
+#     print(M, m)
+#     X, Y, Z = np.mgrid[0:d1-1:d1, 0:d1-1:d1, 0:d1-1:d1]
+
+#     fig = go.Figure(data=go.Volume(x=X.flatten(),
+#                                    y=Y.flatten(),
+#                                    z=Z.flatten(),
+#                                    value=mrc.data.flatten(),
+#                                    isomin=0.1,
+#                                    isomax=0.8,
+#                                    opacity=0.5, 
+#                                    surface_count=17))
+#     fig.update_layout(autosize=False, width=800, height=800)
+
+
+    # fig.write_html('/home/ubuntu/mrc.html')
+    # return None
+

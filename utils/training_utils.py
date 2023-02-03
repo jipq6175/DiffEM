@@ -1,6 +1,6 @@
 # training cryoEM diffusion/denoising model
 
-import os, torch
+import os, torch, pickle
 
 import numpy as np
 
@@ -9,7 +9,7 @@ from tqdm.auto import tqdm
 
 from torch.optim import Adam, AdamW, SGD
 
-from utils.data_utils import S3MODELURI, MODELPATH, plot
+from utils.data_utils import S3MODELURI, MODELPATH
 from utils.diff_utils import *
 from utils.wandb_utils import *
 from model.UNet import *
@@ -17,11 +17,12 @@ from model.UNet import *
 
 
 
-def train_diffusion(dataloader, training_parameters, diffusion_parameters, model_parameters): 
+def train_diffusion(dataloader, training_parameters, params, model_parameters): 
 
-    T = diffusion_parameters['diffusion_steps']
-    scheduling = diffusion_parameters['scheduling']
-    assert scheduling in ['cosine', 'linear', 'sigmoid', 'quadratic'], f'Wrong scheduling = {scheduling}..'
+    T = len(params['betas'])
+    # T = diffusion_parameters['diffusion_steps']
+    # scheduling = diffusion_parameters['scheduling']
+    # assert scheduling in ['cosine', 'linear', 'sigmoid', 'quadratic'], f'Wrong scheduling = {scheduling}..'
 
     device = torch.device(training_parameters['device'])
     optimizer = training_parameters['optimizer']
@@ -33,11 +34,11 @@ def train_diffusion(dataloader, training_parameters, diffusion_parameters, model
     loss_type = training_parameters['loss_type']
 
     # diffusion stuff
-    if scheduling == 'cosine': betas = cosine_beta_schedule(T)
-    elif scheduling == 'linear': betas = linear_beta_schedule(T)
-    elif scheduling == 'sigmoid': betas = sigmoid_beta_schedule(T)
-    else: betas = quadratic_beta_schedule(T)
-    params = get_forward_diffusion_parameters(betas)
+    # if scheduling == 'cosine': betas = cosine_beta_schedule(T)
+    # elif scheduling == 'linear': betas = linear_beta_schedule(T)
+    # elif scheduling == 'sigmoid': betas = sigmoid_beta_schedule(T)
+    # else: betas = quadratic_beta_schedule(T)
+    # params = get_forward_diffusion_parameters(betas)
     
     # models
     noise2noise = UNet(**model_parameters)
@@ -53,11 +54,11 @@ def train_diffusion(dataloader, training_parameters, diffusion_parameters, model
     else: opt = Adam(noise2noise.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     
-    for epoch in tqdm(range(nepochs + 1), desc='-- Training DiffEM Model...'): 
+    for __ in tqdm(range(nepochs + 1), desc='-- Training DiffEM Model...'): 
 
         losses = []
 
-        for step, batch_images in enumerate(dataloader): 
+        for _, batch_images in enumerate(dataloader): 
 
             opt.zero_grad()
 
@@ -79,18 +80,25 @@ def train_diffusion(dataloader, training_parameters, diffusion_parameters, model
     wandb_summary(loss=np.array(losses).mean())
     
 
-    return noise2noise, params
+    return noise2noise
     
 
 
-# save and upload the model
-def deposit_model(noise2noise, model_name, model_path=MODELPATH, s3_uri=S3MODELURI): 
+# save and upload the model and the corresponding variance scheduling
+def deposit_model(noise2noise, params, model_name, model_path=MODELPATH, s3_uri=S3MODELURI): 
     
+    # model
     model_file = os.path.join(model_path, f'{model_name}.pt')
     torch.save(noise2noise.state_dict(), model_file)
     
-    s3_file = f'{s3_uri}{model_name}.pt'
-    s3cmd = f'aws s3 cp {model_file} {s3_file}'
+    s3cmd = f'aws s3 cp {model_file} {s3_uri}{model_name}.pt'
+    assert os.system(s3cmd) == 0
+
+    # variance scheduling
+    param_file = os.path.join(model_path, f'{model_name}_params.pkl')
+    with open(param_file, 'wb') as f: pickle.dump(params, f)
+    
+    s3cmd = f'aws s3 cp {param_file} {s3_uri}{model_name}_params.pkl'
     assert os.system(s3cmd) == 0
 
     return None

@@ -8,6 +8,8 @@ from utils.diff_utils import *
 
 from model.UNet import UNet
 
+# dset = ['test-5k', 'test-30k', 'test-50k']
+# star_files = f'/home/ubuntu/data/{dset}/{dset}.star'
 
 
 
@@ -15,9 +17,10 @@ from model.UNet import UNet
 
 if __name__ == '__main__':
 
-    
+    model_name = 'DiffEM_1000_1000_2022-12-14-19-39-03'
+
     T = 1000
-    BATCH_SIZE = 400
+    BATCH_SIZE = 100
     IMAGE_SIZE = 128
     CHANNELS = 1
 
@@ -30,7 +33,7 @@ if __name__ == '__main__':
     noise2noise.to(device)
 
     # load the fully trained model
-    noise2noise.load_state_dict(torch.load('/home/ubuntu/trained_models/DiffEM_1000_1000_2022-12-14-19-39-03.pt'))
+    noise2noise.load_state_dict(torch.load(f'/home/ubuntu/trained_models/{model_name}.pt'))
 
     
     noise_idx = [500, 750, 900, 949]
@@ -39,9 +42,11 @@ if __name__ == '__main__':
 
     # sample images and save as mrcs
     # for dset in ['test-30k', 'test-50k']:
-    for dset in ['test-50k']:
+    # for dset in ['test-5k', 'test-30k', 'test-50k']:
+    for dset in ['test-5k']:
         
         test_images = read_mrcs(f'/home/ubuntu/data/{dset}/{dset}.mrcs')
+        starfile = f'/home/ubuntu/data/{dset}/{dset}.star'
         sample_dct = {T - 1: [], T - 10: [], int(0.9 * T): [], int(0.8 * T): []}
         nepochs = int(test_images.shape[0] / BATCH_SIZE)
         
@@ -66,10 +71,19 @@ if __name__ == '__main__':
 
                 mrcs = np.concatenate(denoised_samples)
                 write_mrcs(filepath, mrcs)
-                
-                s3path = os.path.join('s3://seismictx-cryoem/diffem/data/denoised/', dset, f'denoised_samples_nl_{t}_halluc_{noise_scale:.1f}_50_steps.mrcs')
+                s3path = os.path.join('s3://seismictx-cryoem/diffem/data/denoised/', dset, model_name, f'denoised_samples_nl_{t}_halluc_{noise_scale:.1f}_50_steps.mrcs')
                 s3cmd = f'aws s3 cp {filepath} {s3path}'
                 assert os.system(s3cmd) == 0
 
                 rmcmd = f'rm {filepath}'
                 assert os.system(rmcmd) == 0
+
+
+                reconstructionfile = reconstruct(starfile, s3path)
+                s3path = os.path.join('s3://seismictx-cryoem/diffem/data/denoised/', dset, model_name, f'denoised_samples_nl_{t}_halluc_{noise_scale:.1f}_50_steps_reconstruct.mrc')
+                s3cmd = f'aws s3 cp {reconstructionfile} {s3path}'
+                assert os.system(s3cmd) == 0
+
+                rmcmd = f'rm {reconstructionfile}'
+                assert os.system(rmcmd) == 0
+                

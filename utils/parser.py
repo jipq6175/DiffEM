@@ -36,7 +36,7 @@ parser.add_argument("--loss_type", type=str, default='L1', choices=['L1', 'L2'],
 
 # Diffusion Parameters
 parser.add_argument("--diffusion_steps", type=int, default=1000, help="Diffusion Steps")
-parser.add_argument("--var_schedule", type=str, choices=['cosine', 'linear', 'sigmoid', 'quadratic'], default='cosine')
+parser.add_argument("--var_schedule", type=str, choices=['cosine', 'linear', 'sigmoid', 'quadratic'], default='linear')
 
 
 

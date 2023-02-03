@@ -85,6 +85,17 @@ def q_sample(x0, t, params, noise=None):
 def get_noisy_image(x0, t, params): 
     x_noisy = q_sample(x0, t, params)
     return x_noisy
+
+
+# get the diffusion params
+def get_variance_scheduling(T, scheduling):
+    print(f'-- Using {scheduling} variance scheduling.')
+    assert scheduling in ['cosine', 'linear', 'sigmoid', 'quadratic'], f'Wrong scheduling = {scheduling}..'
+    if scheduling == 'cosine': betas = cosine_beta_schedule(T)
+    elif scheduling == 'linear': betas = linear_beta_schedule(T)
+    elif scheduling == 'sigmoid': betas = sigmoid_beta_schedule(T)
+    else: betas = quadratic_beta_schedule(T)
+    return get_forward_diffusion_parameters(betas)
     
 
 # Sampling: Samples from the noisy gaussian 
@@ -198,13 +209,3 @@ def visualize_samples(noise2noise, image_size, batch_size, channels, params, sav
     return samples
 
 
-
-# # denoise the images and deposit 
-# def visualize_samples(noise2noise, image_size, batch_size, channels, params, savepath):
-#     samples = sample(noise2noise, image_size=image_size, batch_size=batch_size, channels=channels, params=params)
-#     T = len(params['beta'])
-#     ts = [0, 50, int(0.5 * T), int(0.75 * T), int(0.9 * T), T - 10, T - 5, T - 3, T - 2, T - 1]
-#     samples_for_plot = [[torch.from_numpy(samples[j][i, 0, :, :]) for j in ts] for i in range(batch_size)]
-#     plot(samples_for_plot)
-#     plt.savefig(savepath)
-#     return samples

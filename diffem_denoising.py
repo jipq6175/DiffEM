@@ -17,10 +17,11 @@ from model.UNet import UNet
 
 if __name__ == '__main__':
 
-    model_name = 'DiffEM_1000_1000_2022-12-14-19-39-03'
+    model_name = sys.argv[-1]
+    # model_name = 'DiffEM_1000_1000_2022-12-14-19-39-03'
 
     T = 1000
-    BATCH_SIZE = 100
+    BATCH_SIZE = 500
     IMAGE_SIZE = 128
     CHANNELS = 1
 
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     params = get_forward_diffusion_parameters(betas)
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    noise2noise = UNet(dim=IMAGE_SIZE, channels=CHANNELS, dim_mults=(1, 2, 4), use_convnext=False)
+    noise2noise = UNet(dim=IMAGE_SIZE, channels=CHANNELS, dim_mults=(1, 2, 4, 8), use_convnext=False)
     noise2noise = torch.nn.DataParallel(noise2noise)
     noise2noise.to(device)
 
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     # sample images and save as mrcs
     # for dset in ['test-30k', 'test-50k']:
     # for dset in ['test-5k', 'test-30k', 'test-50k']:
-    for dset in ['test-5k']:
+    for dset in ['test-5k', 'test-30k']:
         
         test_images = read_mrcs(f'/home/ubuntu/data/{dset}/{dset}.mrcs')
         starfile = f'/home/ubuntu/data/{dset}/{dset}.star'
@@ -78,7 +79,7 @@ if __name__ == '__main__':
                 rmcmd = f'rm {filepath}'
                 assert os.system(rmcmd) == 0
 
-
+                print('-- Reconstructing with relion ...')
                 reconstructionfile = reconstruct(starfile, s3path)
                 s3path = os.path.join('s3://seismictx-cryoem/diffem/data/denoised/', dset, model_name, f'denoised_samples_nl_{t}_halluc_{noise_scale:.1f}_50_steps_reconstruct.mrc')
                 s3cmd = f'aws s3 cp {reconstructionfile} {s3path}'
@@ -86,4 +87,5 @@ if __name__ == '__main__':
 
                 rmcmd = f'rm {reconstructionfile}'
                 assert os.system(rmcmd) == 0
-                
+    
+    print('SUCCESS')

@@ -26,9 +26,9 @@ if __name__ == '__main__':
     # argparse
     args = parser.parse_args()
 
-    # seed
+    # seed, experiment and architecture
     seed, experiment, architecture = args.seed, args.experiment, args.architecture
-    random.seed(seed)
+    if seed is not None: random.seed(seed)
 
     # experiment name
     now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
 
     # dataloader
-    dataloader = get_dataloader(training_parameters['datapath'], batch_size=training_parameters['batch_size'])
+    dataloader = get_dataloader(training_parameters['datapath'], batch_size=training_parameters['batch_size'], shuffle=True)
     
 
     # wandb setup before training

@@ -22,6 +22,9 @@ DIR = '/home/ubuntu/'
 DATAPATH = '/home/ubuntu/data/10299_1k.mrcs'
 RECONPATH = '/home/ubuntu/reconstructions/'
 RECONBIN = '/home/ubuntu/relion/build/bin/relion_reconstruct'
+REFINEPATH = '/home/ubuntu/refinements'
+REFINEBIN = '/home/ubuntu/relion/build/bin/relion_refine_mpi'
+PPBIN = '/home/ubuntu/relion/build/bin/relion_postprocess'
 
 
 S3MODELURI = 's3://seismictx-cryoem/diffem/trained_models/'
@@ -117,6 +120,7 @@ def get_mrcs_number_and_name(starfile):
     n, name = s.split('@')
     return int(n), name
 
+
 def reconstruct(starpath, mrcsuri, reconpath=RECONPATH, reconbin=RECONBIN): 
 
     currdir = os.getcwd()
@@ -130,7 +134,7 @@ def reconstruct(starpath, mrcsuri, reconpath=RECONPATH, reconbin=RECONBIN):
     assert os.system(s3cmd) == 0
 
     mrc = mrcfile.open(mrcsname)
-    assert mrc.data.shape[0] == n, '# of images does not match the star file'
+    assert mrc.data.shape[0] == n, f'# of images {mrc.data.shape[0]} does not match the star file n = {n}'
     
     relioncmd = f'{reconbin} --i {starpath} --o {mrcss3name[:-5]}_reconstruction.mrc'
     assert os.system(relioncmd) == 0
@@ -139,6 +143,53 @@ def reconstruct(starpath, mrcsuri, reconpath=RECONPATH, reconbin=RECONBIN):
     
     return os.path.join(reconpath, f'{mrcss3name[:-5]}_reconstruction.mrc') 
 
+
+# refinement and get the fsc
+def refine(starpath, mrcsuri, refpath, maskpath, model_name, particle='test-5k', particle_diameter=148, lowpass=15, cpus=15, iter=-1,
+           refinepath=REFINEPATH, refinebin=REFINEBIN, ppbin=PPBIN): 
+    
+    currdir = os.getcwd()
+
+    n, mrcsname = get_mrcs_number_and_name(starpath)
+    mrcss3name = os.path.basename(mrcsuri)
+    
+    workingdir = os.path.join(refinepath, mrcss3name[:-4])
+    os.makedirs(workingdir, exist_ok=True)
+    os.chdir(workingdir)
+
+    s3cmd = f'aws s3 cp {mrcsuri} ./{mrcsname}'
+    assert os.system(s3cmd) == 0
+
+    mrc = mrcfile.open(mrcsname)
+    assert mrc.data.shape[0] == n, f'# of images {mrc.data.shape[0]} does not match the star file n = {n}'
+    
+    # refinement: expensive
+    relioncmd = f'mpirun -np {cpus} {refinebin} --i {starpath} --ref {refpath} --solvent_mask {maskpath} --particle_diameter {particle_diameter} --lowpass {lowpass} --o {workingdir}/ --j 10 --auto_refine --split_random_halves --iter {iter}'
+    assert os.system(relioncmd) == 0
+
+    # get the max iterations 
+    filenames = [x for x in os.listdir(workingdir) if x.endswith('_half1_class001.mrc')]
+    filenames.sort()
+    it = filenames[-1][3:6]
+    print(f'Using {it} iterations from refinement')
+
+    # post-processing
+    relioncmd = f'{ppbin} --i _it{it}_half1_class001.mrc --i2 _it{it}_half2_class001.mrc --auto_bfac true --mask {maskpath}'
+    os.system(relioncmd)
+
+    # sync to s3: 
+    s3cmd = f'aws s3 sync {workingdir} s3://seismictx-cryoem/diffem/data/denoised/{particle}/{model_name}/refinement/{mrcss3name}'
+    assert os.system(s3cmd) == 0
+
+    os.chdir(currdir)
+
+    return None
+
+
+
+    
+
+    
 
 # maybe not bothere with voxel visualization
 # def plot_voxel(mrcpath): 

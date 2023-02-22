@@ -27,7 +27,7 @@ parser.add_argument("--data_path", type=str, default=None, help="Path to mrcs tr
 parser.add_argument("--batch_size", type=int, default=32, help="Minibatch Size")
 # parser.add_argument("--n_sampling", type=int, default=10, help="Number of balance sampling per batch")
 parser.add_argument("--optimizer", type=str, default='Adam', choices=['Adam', 'SGD', 'AdamW'], help="Optimizer")
-parser.add_argument("--learning_rate", type=float, default=1e-3, help="Learning rate")
+parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--weight_decay", type=float, default=1e-2, help="Weight decay")
 parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs")
 # parser.add_argument("--log_every", type=int, default=50, help="Print log every")
@@ -43,6 +43,6 @@ parser.add_argument("--var_schedule", type=str, choices=['cosine', 'linear', 'si
 # Other parameters
 # parser.add_argument("--gpu", type=int, default=0, help="GPU index")
 # parser.add_argument("--log", default=False, action='store_true')
-parser.add_argument("--seed", type=int, default=99, help="Random seed")
+parser.add_argument("--seed", type=int, default=None, help="Random seed")
 parser.add_argument("--keep_model", type=bool, default=True, help="Save model")
 # parser.add_argument("--visualization", default=False, action='store_true')

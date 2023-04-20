@@ -31,7 +31,7 @@ parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning 
 parser.add_argument("--weight_decay", type=float, default=1e-2, help="Weight decay")
 parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs")
 # parser.add_argument("--log_every", type=int, default=50, help="Print log every")
-parser.add_argument("--loss_type", type=str, default='L1', choices=['L1', 'L2'], help='L1 or L2 loss')
+parser.add_argument("--loss_type", type=str, default='L1', choices=['L1', 'L2', 'huber'], help='L1 or L2 or huber loss')
 
 
 # Diffusion Parameters

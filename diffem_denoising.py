@@ -44,7 +44,8 @@ if __name__ == '__main__':
     # sample images and save as mrcs
     # for dset in ['test-30k', 'test-50k']:
     # for dset in ['test-5k', 'test-30k', 'test-50k']:
-    for dset in ['test-5k', 'test-30k']:
+    # for dset in ['test-5k', 'test-30k']:
+    for dset in ['test-50k']:
         
         test_images = read_mrcs(f'/home/ubuntu/data/{dset}/{dset}.mrcs')
         starfile = f'/home/ubuntu/data/{dset}/{dset}.star'

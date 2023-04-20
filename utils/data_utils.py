@@ -192,16 +192,17 @@ def refine(starpath, mrcsuri, refpath, model_name, maskpath='/home/ubuntu/refine
 
     
     # get the max iterations 
-    filenames = [x for x in os.listdir(workingdir) if x.endswith('_half1_class001.mrc')]
-    filenames.sort()
-    it = filenames[-1][3:6]
-    print(f'\nUsing {it} iterations from refinement')
+    # filenames = [x for x in os.listdir(workingdir) if x.endswith('_half1_class001.mrc')]
+    # filenames.sort()
+    # it = filenames[-1][3:6]
+    # print(f'\nUsing {it} iterations from refinement')
 
     
 
     # post-processing
     # relioncmd = f'{ppbin} --i _it{it}_half1_class001.mrc --i2 _it{it}_half2_class001.mrc --auto_bfac false --mask {maskpath} --skip_fsc_weighting'
-    relioncmd = f'{ppbin} --i _it{it}_half1_class001.mrc --i2 _it{it}_half2_class001.mrc --auto_bfac false --mask {maskpath}'
+    # relioncmd = f'{ppbin} --i _it{it}_half1_class001.mrc --i2 _it{it}_half2_class001.mrc --auto_bfac false --mask {maskpath}'
+    relioncmd = f'{ppbin} --i _half1_class001_unfil.mrc --i2 _half2_class001_unfil.mrc --auto_bfac false --mask {maskpath} --autob_lowres 10'
     relioncmd += ' > postprocessing_run.out'
     print(relioncmd)
     os.system(relioncmd)
